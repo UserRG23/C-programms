@@ -9,3 +9,6 @@ test: build
 
 debug: build 
 	gdb bin/run 
+
+spec: build
+	exec ./bin/test_spec.sh $1

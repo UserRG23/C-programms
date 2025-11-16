@@ -20,7 +20,6 @@ typedef struct {
 
 Bypass bypass;
 
-
 // Data structure for dates 
 // Code from previous progtest
 typedef struct TDate // dates valid from 1900-01-01
@@ -93,7 +92,19 @@ typedef struct {
 Changes changes;
 
 typedef struct {
-	unsigned * data;
+	unsigned days;
+	unsigned chVal;
+	unsigned chIndx;
+	unsigned elem;
+} His;
+
+His createHis ( unsigned days, unsigned chVal, unsigned chIndx, unsigned elem ) {
+	His tmp = { days, chVal, chIndx, elem };
+	return tmp;
+}
+
+typedef struct {
+	His * data;
 	unsigned size;
 } History;
 
@@ -186,6 +197,7 @@ int parseCommand ( TDATE * from, TDATE * to, Cell * cell ) {
 		if ( !checkDate ( cell->date ) ) INVALID_INPUT
 		if ( changes . size != 0 ) {
 			if ( lessDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT
+			if ( equalDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT
 		}
 
 		int tmp;
@@ -223,51 +235,74 @@ unsigned countDays ( TDATE from, TDATE to ) {
 	return days + daysInMonths + daysInYears + 1;
 }
 
+unsigned find ( History * buff, unsigned chIndx ) {
+	for ( unsigned buffi = buff -> size - 1; buffi >= 1; buffi -- ){
+		if ( buff -> data [ buffi ] . chIndx == chIndx ) { 
+			return buff -> data [ buffi ] . chVal; 
+		}
+	}
+	return ( bypass . data [ chIndx + 1 ] - bypass . data [ chIndx ] );
+}
+
+
 // Amount of days between two dates
-void sumDays ( TDATE from,
+void totalSumDays ( TDATE from,
 		   TDATE to,
 		   unsigned indx,
-		   unsigned * sum,
-		   unsigned left, 
-		   unsigned right,
-		   History * buff ) {
+		   History* buff,
+		   unsigned * sum ) {
 
 	unsigned result = 0;
 	unsigned chVal = 0, chIndx = 0, elem = 0;
 	unsigned daysAmount;
 	
 	if ( changes . size != 0 ) {
+		if ( lessDate( from , changes . data [ indx ] . date ) ||
+				equalDate ( from, changes . data [ indx ] . date ) ) {
 
-		if ( equalDate ( changes . data [ indx ] . date, from ) ) {
-			chIndx = changes . data [ indx ] . indx;
-			if ( chIndx >= left && chIndx <= right ) {
+			if ( equalDate ( changes . data [ indx ] . date, from ) ) {
+				chIndx = changes . data [ indx ] . indx;
 				chVal = changes . data [ indx ] . value;
 				elem = ( bypass . data [ chIndx + 1 ] - bypass . data [ chIndx ] );
 			}
-		}
 
-		for ( unsigned i = indx; i < changes . size; i ++ ) {
-			TDATE tmp = changes . data [ i ] . date;
-			if ( lessDate( to, from ) && lessDate ( to, tmp ) ) break; 
-			chIndx = changes . data [ i ] . indx;
-			if ( chIndx < left || chIndx > right ) continue; 
+			for ( unsigned i = indx; i < changes . size; i ++ ) {
+				TDATE tmp = changes . data [ i ] . date;
+				if ( lessDate( to, from ) && lessDate ( to, tmp ) ) break; 
 
-			*sum = *sum - elem + chVal;
-			daysAmount = countDays( from, tmp ) - 1;
-			result += *sum * daysAmount;
+				*sum = *sum - elem + chVal;
+				daysAmount = countDays( from, tmp ) - 1;
+				result += *sum * daysAmount;
+				buff -> data [ buff -> size ++ ] = createHis ( daysAmount, chVal, chIndx, elem );
 
-			chVal = changes . data [ i ] . value;
-			elem = ( bypass . data [ chIndx + 1 ] - bypass . data [ chIndx ] );
-			from = tmp;
+				chIndx = changes . data [ i ] . indx;
+				chVal = changes . data [ i ] . value;
+				elem = find ( buff, chIndx );
+				from = tmp;
+			}
 		}
 	}
 	daysAmount = countDays( from, to );
 	*sum = *sum - elem + chVal;
 	result += *sum * daysAmount;
 	*sum = result;
+	buff -> data [ buff -> size ++ ] = createHis ( daysAmount, chVal, chIndx, elem );
 }
 
 
+void sumDays ( unsigned * sum,
+			   unsigned left, 
+			   unsigned right,
+			   History buff ) {
+	unsigned result = 0;
+	for ( unsigned i = 0; i < buff . size; i ++ ) {
+		if ( buff . data [ i ] . chIndx >= left && buff . data [ i ] . chIndx <= right - 1 ) {
+			*sum = *sum - buff . data [ i ] . elem + buff . data [ i ] . chVal;
+		}
+		result += *sum * buff . data [ i ] . days;
+	}
+	*sum = result;
+}
 
 unsigned binarySearch ( const TDATE date ) {
 	unsigned lo = 0, hi = changes.size - 1, mid;
@@ -275,6 +310,7 @@ unsigned binarySearch ( const TDATE date ) {
 		mid = lo + ( hi - lo ) / 2;
 		if ( lessDate( date, changes.data [ mid ].date ) ) {
 			if ( hi == 0 ) return 0;
+			if ( mid == 0 ) return 0;
 			hi = mid - 1;
 		}
 		else if ( lessDate(  changes.data [ mid ].date, date ) ) lo = mid + 1;
@@ -295,14 +331,16 @@ void findIntervals ( const TDATE from, const TDATE to, Result * result ) {
 
 	if ( changes . size != 0 ) {
 		indx = binarySearch( from );
-		buff . data = ( unsigned * ) alloca( sizeof ( unsigned ) * ( changes . size - indx ) );
+		buff . data = ( His * ) malloc( sizeof ( His ) * ( ( changes . size - indx ) + 1 ) );
+	} else {
+		buff . data = ( His * ) malloc( sizeof ( His ) );
 	}
-	sumDays ( from, to, indx, &total, 0, bypass . size - 2 );
 	// total *= countDays( from, to );
+	totalSumDays( from, to, indx, &buff, &total );
 
-	while (  right < bypass . size - 1 ) {
+	while ( right < bypass . size - 1 ) {
 		sum = bypass . data [ right ] - bypass . data [ left ];
-		sumDays ( from, to, indx, &sum, left, right );
+		sumDays ( &sum, left, right, buff );
 
 		diff = sum - ( total - sum );
 		abs_diff = abs ( diff );
@@ -318,7 +356,7 @@ void findIntervals ( const TDATE from, const TDATE to, Result * result ) {
 		if ( diff > 0 ) left ++; 
 		if ( left == right ) right ++;
 	}
-	free ( history );
+	free ( buff.data );
 }
 
 void resultOut ( const Result * result ) {
