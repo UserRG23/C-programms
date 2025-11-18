@@ -11,7 +11,7 @@
 #define MAX_SIZE 10001
 #define MAX_UPDATES 300000
 #define INVALID_INPUT { printf("Invalid input.\n"); \
-					  return 2; }
+					  return false; }
 
 typedef struct {
 	unsigned data [ MAX_SIZE ];
@@ -76,16 +76,15 @@ bool checkDate( const TDATE date )
     return true;
 }
 
-
 // Date table
 typedef struct {
 	TDATE date;
 	unsigned int value;
 	unsigned int indx;
-} Cell;
+} ChangesCell;
 
 typedef struct {
-	Cell data [ MAX_UPDATES ];
+	ChangesCell data [ MAX_UPDATES ];
 	unsigned int size;
 } Changes;
 
@@ -96,17 +95,25 @@ typedef struct {
 	unsigned chVal;
 	unsigned chIndx;
 	unsigned elem;
-} His;
+} BufferCell;
 
-His createHis ( unsigned days, unsigned chVal, unsigned chIndx, unsigned elem ) {
-	His tmp = { days, chVal, chIndx, elem };
+BufferCell createBufferCell ( unsigned days, unsigned chVal, unsigned chIndx, unsigned elem ) {
+	BufferCell tmp = { days, chVal, chIndx, elem };
 	return tmp;
 }
 
 typedef struct {
-	His * data;
+	BufferCell * data;
 	unsigned size;
-} History;
+} Buffer;
+
+Buffer createBuffer ( unsigned start ) {
+	Buffer result = {
+	 ( BufferCell * ) malloc( sizeof ( BufferCell ) * ( ( changes . size - start ) + 1 ) ),
+	 0
+	};
+	return result;
+}
 
 // Result intervals 
 typedef struct {
@@ -144,6 +151,9 @@ ResultCell createResult ( unsigned int value,
  *  invalid date interval in the assignment command (start date must be less than or equal to the end date).
 */
 
+// --------------------------------------------------------------------------------------------------------
+// UI section
+
 int readArray () {
 	bypass . data [ 0 ] = 0;
 	bypass . size = 1;
@@ -163,143 +173,157 @@ int readArray () {
 
 		if ( sign == '}' ) {
 			if ( bypass . size < 3 ) INVALID_INPUT 
-			return 0;
+			return true;
 		}
 	}
 	INVALID_INPUT
 }
 
-int parseCommand ( TDATE * from, TDATE * to, Cell * cell ) {
-	char sign;
+bool parseRequestCommand ( TDATE * from, TDATE * to ) {
 	unsigned year;
 	unsigned short day, month;
-	scanf ( " %c", &sign );
-	if ( feof ( stdin ) ) return 2;
-	if ( sign == '?' ) {
-		// Parse first date
-		
-		if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3) INVALID_INPUT
-		*from = makeDate( year, month, day );
-		if ( !checkDate ( *from ) ) INVALID_INPUT
+	// Parse first date
+	if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3) INVALID_INPUT;
+	*from = makeDate( year, month, day );
+	if ( !checkDate ( *from ) ) INVALID_INPUT;
 
-		// Parse second date
-		if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3 ) INVALID_INPUT
-		*to = makeDate( year, month, day );
-		if ( !checkDate ( *to ) ) INVALID_INPUT
+	// Parse second date
+	if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3 ) INVALID_INPUT;
+	*to = makeDate( year, month, day );
+	if ( !checkDate ( *to ) ) INVALID_INPUT;
 
-		// if from > to then invalid input
-		if ( lessDate ( *to, *from ) ) INVALID_INPUT
+	// if from > to then invalid input
+	if ( lessDate ( *to, *from ) ) INVALID_INPUT;
 
-		return 0;
-	} else if ( sign == '=' ) {
-		if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3) INVALID_INPUT
-		cell -> date = makeDate( year, month, day );
-		if ( !checkDate ( cell->date ) ) INVALID_INPUT
-		if ( changes . size != 0 ) {
-			if ( lessDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT
-			if ( equalDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT
-		}
-
-		int tmp;
-		if ( scanf ( " %d", &tmp ) != 1 ) INVALID_INPUT 
-		if ( ( unsigned ) tmp > bypass.size - 1 ) INVALID_INPUT
-		if ( tmp < 0 ) INVALID_INPUT
-		cell -> indx = tmp;
-		
-		char sign;
-		if ( scanf ( " %c", &sign ) != 1 ) INVALID_INPUT 
-		if ( sign != ':' ) INVALID_INPUT 
-
-		if ( scanf ( " %d", &tmp ) != 1 ) INVALID_INPUT 
-		if ( tmp < 0 ) INVALID_INPUT
-		cell -> value = tmp;
-
-		return 1;
-	} 
-
-	INVALID_INPUT
+	return true;
 }
+
+bool parseSetCommand ( ChangesCell * cell ) {
+	unsigned year;
+	unsigned short day, month;
+	if ( scanf ( " %u-%hu-%hu", &year, &month, &day ) != 3) INVALID_INPUT;;
+	cell -> date = makeDate( year, month, day );
+	if ( !checkDate ( cell->date ) ) INVALID_INPUT;;
+	if ( changes . size != 0 ) {
+		if ( lessDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT;;
+		if ( equalDate( cell -> date, changes . data [ changes . size - 1 ] . date ) ) INVALID_INPUT;;
+	}
+
+	int tmp;
+	if ( scanf ( " %d", &tmp ) != 1 ) INVALID_INPUT;; 
+	if ( ( unsigned ) tmp > bypass.size - 1 ) INVALID_INPUT;;
+	if ( tmp < 0 ) INVALID_INPUT;;
+	cell -> indx = tmp;
+
+	char sign;
+	if ( scanf ( " %c", &sign ) != 1 ) INVALID_INPUT; 
+	if ( sign != ':' ) INVALID_INPUT; 
+
+	if ( scanf ( " %d", &tmp ) != 1 ) INVALID_INPUT; 
+	if ( tmp < 0 ) INVALID_INPUT;
+	cell -> value = tmp;
+
+	return true;
+}
+
+void resultOut ( const Result result ) {
+	printf ( "Difference: %u, options: %u\n", result . data [0] . value, result . size );
+	for ( unsigned i = 0; i < result . size; i ++ ) {
+		printf ( "* %u - %u, ", result . data [ i ] . from, result . data [ i ] . to );
+		unsigned restFrom = ( result . data [ i ] . to + 1 ) % (bypass . size - 1); 
+		unsigned restTo = result . data [ i ] . from; 
+		restTo = restTo == 0 ? bypass . size - 2 : restTo - 1;
+		printf ( "%u - %u\n", restFrom, restTo );
+	}
+}
+// --------------------------------------------------------------------------------------------------------
+
 
 unsigned countDays ( TDATE from, TDATE to ) {
 	if ( equalDate ( from, to ) ) return 1;
-	const unsigned short day [] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 	int days =  to . m_Day - from . m_Day;
+
+	const unsigned short day [] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 	from . m_Month --;
 	to . m_Month --;
 	int leap1 = isLeap ( to . m_Year ) && to . m_Month >= 2 ? 1 : 0; 
 	int leap2 = isLeap ( from . m_Year ) && from . m_Month >= 2 ? 1 : 0;
 	int daysInMonths =  ( day [ to . m_Month ] + leap1 ) - ( day [ from . m_Month ] + leap2 );  
-	unsigned daysInYears = 0;
-	for ( unsigned i = from . m_Year; i < to . m_Year; i++ )
-		daysInYears += isLeap( i ) ? 366 : 365;
-	return days + daysInMonths + daysInYears + 1;
+
+	unsigned yearDiff = to . m_Year - from . m_Year;
+	from . m_Year --; 
+	unsigned leapYears = ( to . m_Year / 4 - from . m_Year / 4 ) - ( to . m_Year / 100 - from . m_Year / 100 ) 
+					   + ( to . m_Year / 400 - from . m_Year / 400 ) - ( to . m_Year / 4000 - from . m_Year / 4000 );
+
+	return days + daysInMonths + ( yearDiff * 365 ) + ( yearDiff == 0 ? 0 : leapYears )+ 1;
 }
 
-unsigned find ( History * buff, unsigned chIndx ) {
-	for ( unsigned buffi = buff -> size - 1; buffi >= 1; buffi -- ){
-		if ( buff -> data [ buffi ] . chIndx == chIndx ) { 
+unsigned find ( Buffer * buff, unsigned chIndx ) {
+	for ( int buffi = buff -> size - 1; buffi >= 0; buffi -- )
+		if ( buff -> data [ buffi ] . chIndx == chIndx )  
 			return buff -> data [ buffi ] . chVal; 
-		}
-	}
 	return ( bypass . data [ chIndx + 1 ] - bypass . data [ chIndx ] );
 }
 
 
 // Amount of days between two dates
-void totalSumDays ( TDATE from,
+unsigned totalSumDays ( TDATE from,
 		   TDATE to,
 		   unsigned indx,
-		   History* buff,
-		   unsigned * sum ) {
+		   Buffer * buff,
+		   unsigned sum ) {
 
+	unsigned * sections = bypass . data;
 	unsigned result = 0;
-	unsigned chVal = 0, chIndx = 0, elem = 0;
+	unsigned chVal = sections [ 1 ] - sections [ 0 ], chIndx = 0, elem = chVal;
 	unsigned daysAmount;
-	
-	if ( changes . size != 0 ) {
-		if ( lessDate( from , changes . data [ indx ] . date ) ||
-				equalDate ( from, changes . data [ indx ] . date ) ) {
 
-			if ( equalDate ( changes . data [ indx ] . date, from ) ) {
-				chIndx = changes . data [ indx ] . indx;
-				chVal = changes . data [ indx ] . value;
-				elem = ( bypass . data [ chIndx + 1 ] - bypass . data [ chIndx ] );
-			}
-
-			for ( unsigned i = indx; i < changes . size; i ++ ) {
-				TDATE tmp = changes . data [ i ] . date;
-				if ( lessDate( to, from ) && lessDate ( to, tmp ) ) break; 
-
-				*sum = *sum - elem + chVal;
-				daysAmount = countDays( from, tmp ) - 1;
-				result += *sum * daysAmount;
-				buff -> data [ buff -> size ++ ] = createHis ( daysAmount, chVal, chIndx, elem );
-
-				chIndx = changes . data [ i ] . indx;
-				chVal = changes . data [ i ] . value;
-				elem = find ( buff, chIndx );
-				from = tmp;
-			}
+	if ( indx > 0 ) indx --;
+	for ( unsigned i = indx; i < changes . size; i ++ ) {
+		TDATE tmp = changes . data [ i ] . date;
+		if ( lessDate ( tmp, from ) || equalDate ( tmp, from ) ) {
+			chIndx = changes . data [ indx ] . indx;
+			chVal = changes . data [ indx ] . value;
+			elem = ( sections [ chIndx + 1 ] - sections [ chIndx ] );
+			sum = sum - elem + chVal;
+			result += sum;
+			buff -> data [ buff -> size ++ ] = createBufferCell ( daysAmount, chVal, chIndx, elem );
+			continue;
 		}
+
+		if ( lessDate ( to, tmp ) ) break;
+
+		daysAmount = countDays( from, tmp ) - 1;
+		sum = sum - elem + chVal;
+		result += sum * daysAmount;
+		buff -> data [ buff -> size ++ ] = createBufferCell ( daysAmount, chVal, chIndx, elem );
+
+
+		chIndx = changes . data [ i ] . indx;
+		chVal = changes . data [ i ] . value;
+		elem = find ( buff, chIndx );
+		from = tmp;
 	}
+
 	daysAmount = countDays( from, to );
-	*sum = *sum - elem + chVal;
-	result += *sum * daysAmount;
-	*sum = result;
-	buff -> data [ buff -> size ++ ] = createHis ( daysAmount, chVal, chIndx, elem );
+	sum = sum - elem + chVal;
+	result += sum * daysAmount;
+	buff -> data [ buff -> size ++ ] = createBufferCell ( daysAmount, chVal, chIndx, elem );
+	return result;
 }
 
 
 void sumDays ( unsigned * sum,
 			   unsigned left, 
 			   unsigned right,
-			   History buff ) {
+			   Buffer buff ) {
 	unsigned result = 0;
+	BufferCell * cell;
 	for ( unsigned i = 0; i < buff . size; i ++ ) {
-		if ( buff . data [ i ] . chIndx >= left && buff . data [ i ] . chIndx <= right - 1 ) {
-			*sum = *sum - buff . data [ i ] . elem + buff . data [ i ] . chVal;
-		}
-		result += *sum * buff . data [ i ] . days;
+		cell = &buff . data [ i ];
+		if ( cell -> chIndx >= left && cell -> chIndx <= right - 1 ) 
+			*sum = *sum - cell -> elem + cell -> chVal;
+		result += *sum * cell -> days;
 	}
 	*sum = result;
 }
@@ -308,11 +332,8 @@ unsigned binarySearch ( const TDATE date ) {
 	unsigned lo = 0, hi = changes.size - 1, mid;
 	while ( lo <= hi ) {
 		mid = lo + ( hi - lo ) / 2;
-		if ( lessDate( date, changes.data [ mid ].date ) ) {
-			if ( hi == 0 ) return 0;
-			if ( mid == 0 ) return 0;
-			hi = mid - 1;
-		}
+		if ( hi == 0 ) return 0;
+		if ( lessDate( date, changes.data [ mid ].date ) ) hi = mid - 1;
 		else if ( lessDate(  changes.data [ mid ].date, date ) ) lo = mid + 1;
 		else return mid;
 	}
@@ -320,23 +341,15 @@ unsigned binarySearch ( const TDATE date ) {
 }
 
 void findIntervals ( const TDATE from, const TDATE to, Result * result ) {
-	//TODO
-	unsigned total = bypass . data [ bypass . size - 1 ];
 	int diff = 0;
 	unsigned sum = 0;
 	unsigned left = 0, right = 1, minDiff = INT_MAX, abs_diff;
-	unsigned indx;
-	History buff;
-	buff . size = 0;
+	unsigned startDate = 0;
 
-	if ( changes . size != 0 ) {
-		indx = binarySearch( from );
-		buff . data = ( His * ) malloc( sizeof ( His ) * ( ( changes . size - indx ) + 1 ) );
-	} else {
-		buff . data = ( His * ) malloc( sizeof ( His ) );
-	}
-	// total *= countDays( from, to );
-	totalSumDays( from, to, indx, &buff, &total );
+	if ( changes . size != 0 ) startDate = binarySearch( from );
+	Buffer buff = createBuffer ( startDate );
+
+	unsigned total = totalSumDays ( from, to, startDate, &buff, bypass . data [ bypass . size - 1 ] );
 
 	while ( right < bypass . size - 1 ) {
 		sum = bypass . data [ right ] - bypass . data [ left ];
@@ -359,44 +372,42 @@ void findIntervals ( const TDATE from, const TDATE to, Result * result ) {
 	free ( buff.data );
 }
 
-void resultOut ( const Result * result ) {
-	printf ( "Difference: %u, options: %u\n", result -> data [0] . value, result -> size );
-	for ( unsigned i = 0; i < result -> size; i ++ ) {
-		printf ( "* %u - %u, ", result -> data [ i ] . from, result -> data [ i ] . to );
-		unsigned restFrom = ( result -> data [ i ] . to + 1 ) % (bypass . size - 1); 
-		unsigned restTo = result -> data [ i ] . from; 
-		restTo = restTo == 0 ? bypass . size - 2 : restTo - 1;
-		printf ( "%u - %u\n", restFrom, restTo );
-	}
-}
-
-void addDate ( const Cell * cell ) {
-	changes . data [ changes . size ++ ] = *cell;
-}
+void addDate ( const ChangesCell cell ) { changes . data [ changes . size ++ ] = cell; }
 
 int main () {
 	printf("Daily cost:\n");
-	if ( readArray() ) return 0;
+	if ( !readArray() ) return 0;
 	Result result;
 	result . data = (ResultCell*) malloc( sizeof( ResultCell ) * ( ( bypass . size / 2 ) * bypass . size) );
 	TDATE from, to;
-	Cell cell;
+	ChangesCell cell;
 	changes.size = 0;
-	
-	while ( !feof ( stdin ) ) {
-		switch ( parseCommand ( &from, &to, &cell ) ) {
-			case 0:
-				findIntervals( from, to, &result );
-				resultOut( &result );
+
+	char sign;
+	scanf ( " %c", &sign );
+	for (; !feof(stdin); scanf ( " %c", &sign ) ) {
+		switch ( sign ) {
+			case '?':
+				if ( !parseRequestCommand( &from, &to ) ) {
+					free ( result . data );
+					return 0;
+				}
+				findIntervals ( from, to, &result );
+				resultOut ( result );
 				break;
-			case 1:
-				addDate ( &cell );
+			case '=':
+				if ( !parseSetCommand ( &cell ) ) {
+					free ( result . data );
+					return 0;
+				}
+				addDate ( cell );
 				break;
-			case 2:
-				free ( result.data );
+			default:
+				INVALID_INPUT;
+				free ( result . data );
 				return 0;
-				break;
 		}
 	}
+	free ( result . data );
 	return 0;
 }
