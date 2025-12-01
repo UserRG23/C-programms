@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-for i in {00..02}; do
-  in="ENG/00${i}_in.txt"
-  out="ENG/00${i}_out.txt"
+for i in {00..04}; do
+  in="extra/ENG/00${i}_in.txt"
+  out="extra/ENG/00${i}_out.txt"
 
   if diff -u <(./bin/run < "$in") "$out" > /dev/null; then
     echo "Test $i: pass"
