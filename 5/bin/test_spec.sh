@@ -1,13 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-in="extra/ENG/000${1}_in.txt"
-out="extra/ENG/000${1}_out.txt"
+for i in {00..09}; do
+  in= "extra/ENG/00${i}_in.txt"
+  out="extra/ENG/00${i}_out.txt"
 
-if diff -u <(./bin/run < "$in") "$out" > /dev/null; then
-	echo "Test $1: pass"
-else
-	echo "Test $1: FAIL — expected vs actual diff:"
-	diff -u <(./bin/run < "$in") "$out" || true
-fi
-
+  if diff -u <(./bin/run < "$in") "$out" > /dev/null; then
+    echo "Test $i: pass"
+  else
+    echo "Test $i: FAIL — expected vs actual diff:"
+    diff -u <(./bin/run < "$in") "$out" || true
+  fi
+done

@@ -1,390 +1,371 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_STR 1001
-#define INVALID_INPUT { printf("Invalid input.\n"); \
-						return 0; }
+#define INVALID_INPUT { printf("Invalid input.\n"); return 0; }
 
-typedef struct 
-{
-  unsigned short m_Month;
-  unsigned short m_Day;
-  unsigned short m_Hour;
-  unsigned short m_Minute;
+typedef struct {
+    unsigned short m_Month;
+    unsigned short m_Day;
+    unsigned short m_Hour;
+    unsigned short m_Minute;
 } TTime;
 
-bool  equalDate ( TTime a,
-                  TTime b )
-{
-  return a . m_Month == b . m_Month
-         && a . m_Day == b . m_Day 
-		 && a . m_Hour == b . m_Hour
-		 && a . m_Minute == b . m_Minute;
+bool equalDate(TTime a, TTime b) {
+    return a.m_Month == b.m_Month
+        && a.m_Day == b.m_Day
+        && a.m_Hour == b.m_Hour
+        && a.m_Minute == b.m_Minute;
 }
 
-bool lessDate ( TTime a, TTime b ) {
+bool lessDate(TTime a, TTime b) {
     if (a.m_Month != b.m_Month) return a.m_Month < b.m_Month;
-    if ( a . m_Day != b . m_Day ) return a.m_Day < b.m_Day;
-    if ( a . m_Hour != b . m_Hour ) return a.m_Hour < b.m_Hour;
+    if (a.m_Day != b.m_Day) return a.m_Day < b.m_Day;
+    if (a.m_Hour != b.m_Hour) return a.m_Hour < b.m_Hour;
     return a.m_Minute < b.m_Minute;
 }
 
-int maxDay( const unsigned short m_Month )
-{
-  int day[] = { 0,31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  return day [ m_Month ];
+int maxDay(const unsigned short m_Month) {
+    int day[] = { 0,31,28,31,30,31,30,31,31,30,31,30,31 };
+    if (m_Month < 1 || m_Month > 12) return 0;
+    return day[m_Month];
 }
 
-bool checkDay( unsigned short m_Month, unsigned short m_Day )
-{
-    if (m_Day < 1 || m_Day > maxDay ( m_Month ) )return false;
+bool makeDate(int m, int d, int h, int min, TTime *date) {
+    if (m < 1 || m > 12) return false;
+    if (d < 1 || d > maxDay((unsigned short)m)) return false;
+    if (h < 0 || h > 23) return false;
+    if (min < 0 || min > 59) return false;
+    date->m_Month = (unsigned short)m;
+    date->m_Day = (unsigned short)d;
+    date->m_Hour = (unsigned short)h;
+    date->m_Minute = (unsigned short)min;
     return true;
 }
 
-bool makeDate ( int m, int d, int h, int min,
-				TTime * date )
-{
-  if ( d < 1 || d > maxDay ( m ) ) return false;
-  if ( h < 0 || h > 23 ) return false;
-  if ( min < 0 || min > 59 ) return false;
-  date -> m_Day = d;
-  date -> m_Month = m;
-  date -> m_Hour = h;
-  date -> m_Minute = min;
-  return true;
-}
-
 typedef struct {
-	int* camera_id;
-	unsigned capacity;
-	unsigned size;
-	TTime date;
+    unsigned *camera_id;
+    unsigned capacity;
+    unsigned size;
+    TTime date;
 } Spoted;
 
-// Car rz with Spoted
 typedef struct {
-	char rz [ MAX_STR ];
-	Spoted * spoted;
-	unsigned cap;
-	unsigned size;
+    char rz[MAX_STR];
+    Spoted *spoted;
+    unsigned cap; 
+    unsigned size;
 } TCar;
 
-// 2d array 
-typedef struct {
-	TCar * cars;
-	unsigned size;
-	unsigned cap;
-} MainData;
-
-MainData data;
-
-static char decoder [][ 4 ] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-								"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-int decode_month ( char * str ) {
-	for ( int i = 0; i < 12; i ++ ) {
-		if ( strcmp ( str, decoder [ i ] ) == 0 ) return i + 1;
-	}
-	return 13;
+char decoder[][4] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+int decode_month(const char *str) {
+    for (int i = 0; i < 12; ++i) if (strcmp(str, decoder[i]) == 0) return i + 1;
+    return 13;
 }
+const char *incode_month(int month) { return decoder[month - 1]; }
 
-char * incode_month ( int month ) { return decoder [ month - 1 ]; }
-
-int parse_date ( TTime * date ) {
-	static char month [ 4 ];
-	int day;
-	int hour;
-	int minute;
-	char sign;
-	if ( scanf ( " %3s ", month ) != 1 ) return 0;
-	int month_num = decode_month( month );
-	if ( month_num == 13 ) return 0;
-	if ( scanf ( " %d", &day ) != 1 ) return 0;
-	if ( scanf ( " %d", &hour ) != 1 ) return 0;
-	if ( scanf ( " %c", &sign ) != 1 ) return 0;
-	if ( sign != ':' ) return 0;
-	if ( scanf ( " %d", &minute ) != 1 ) return 0;
-	if ( !makeDate( month_num, day, hour, minute, date ) ) return 0;
-	return true;
+int parse_date(TTime *date) {
+    char month[4];
+    int day, hour, minute;
+    char sign;
+    if (scanf(" %3s", month) != 1) return 0;
+    int month_num = decode_month(month);
+    if (month_num == 13) return 0;
+    if (scanf(" %d", &day) != 1) return 0;
+    if (scanf(" %d", &hour) != 1) return 0;
+    if (scanf(" %c", &sign) != 1) return 0;
+    if (sign != ':') return 0;
+    if (scanf(" %d", &minute) != 1) return 0;
+    if (!makeDate(month_num, day, hour, minute, date)) return 0;
+    return 1;
 }
-
-// -------------------------------------------------------------
 
 typedef struct NODE {
-	TCar value;
-	struct NODE * left;
-	struct NODE * right;
-	int leftCount;
-	int rightCount;
+    TCar value;
+    struct NODE *left;
+    struct NODE *right;
+    int height;
 } Node;
 
-Node * first;
+Node *first = NULL;
 
-int max ( const int a, const int b ) {
-	return a > b ? a : b;
+int node_height(Node *n) { return n ? n->height : 0; }
+void update_height(Node *n) {
+    if (!n) return;
+    int hl = node_height(n->left);
+    int hr = node_height(n->right);
+    n->height = (hl > hr ? hl : hr) + 1;
+}
+int balance_factor(Node *n) {
+    if (!n) return 0;
+    return node_height(n->left) - node_height(n->right);
 }
 
-void calculateRight ( Node * root ) {
-	if ( root -> right == NULL ) root -> rightCount = 0;
-	else root -> rightCount = max ( root -> right -> leftCount, root -> right -> rightCount ) + 1;
+Node *rotate_right(Node *y) {
+    Node *x = y->left;
+    Node *T2 = x->right;
+    x->right = y;
+    y->left = T2;
+    update_height(y);
+    update_height(x);
+    return x;
 }
 
-void calculateLeft ( Node * root ) {
-	if ( root -> left == NULL ) root -> leftCount = 0;
-	else root -> leftCount = max ( root -> left -> leftCount, root -> left -> rightCount ) + 1; 
+Node *rotate_left(Node *x) {
+    Node *y = x->right;
+    Node *T2 = y->left;
+    y->left = x;
+    x->right = T2;
+    update_height(x);
+    update_height(y);
+    return y;
 }
 
-Node* rotateRight ( Node * r ) {
-	Node * tmp = r -> left;
-	r -> left = tmp -> right;
-	calculateLeft ( r );
-	tmp -> right = r;
-	calculateRight( tmp );
-	return tmp;
+Spoted *alloc_spoted_array(unsigned cap) {
+    Spoted *arr = ( Spoted * ) calloc(cap, sizeof(Spoted));
+    return arr;
 }
 
-Node* rotateLeft ( Node * r ) {
-	Node * tmp = r -> right;
-	r -> right = tmp -> left;
-	calculateRight( r );
-	tmp -> left = r;
-	calculateLeft( tmp );
-	return tmp;
+Node *createNode(const char *str) {
+    Node *newNode = ( Node * ) malloc(sizeof(Node));
+
+    strncpy(newNode->value.rz, str, MAX_STR - 1);
+    newNode->value.rz[MAX_STR - 1] = '\0';
+
+    newNode->value.cap = 1; 
+    newNode->value.size = 0;
+    newNode->value.spoted = alloc_spoted_array(newNode->value.cap);
+
+    newNode->left = newNode->right = NULL;
+    newNode->height = 1;
+    return newNode;
 }
 
+Node *insertAVL(Node *node, const char *key, Node **result) {
+    if (node == NULL) {
+        *result = createNode(key);
+        return *result;
+    }
+    int cmp = strcmp(key, node->value.rz);
+    if (cmp < 0) {
+        node->left = insertAVL(node->left, key, result);
+    } else if (cmp > 0) {
+        node->right = insertAVL(node->right, key, result);
+    } else {
+        *result = node;
+        return node;
+    }
 
-Node* balance ( Node * r ) {
-	if ( r -> rightCount - r -> leftCount < -1 ) {
-		if ( r -> left == NULL ) r = rotateRight( r );
-		else if ( r -> left -> rightCount - r -> left -> leftCount <= 0 ) r = rotateRight( r );
-		else {
-			r -> left = rotateLeft( r -> left );
-			r = rotateRight( r );
-		}
-	}
-	if ( r -> rightCount - r -> leftCount > 1 ) {
-		if ( r -> right == NULL ) r = rotateLeft( r );
-		else if ( r -> right -> rightCount - r -> right -> leftCount >= 0 ) r = rotateLeft( r );
-		else {
-			r -> right = rotateRight( r -> right );
-			r = rotateLeft( r );
-		}
-	}
-	return r;
+    update_height(node);
+    int bf = balance_factor(node);
+
+    if (bf > 1 && strcmp(key, node->left->value.rz) < 0) return rotate_right(node);
+    if (bf < -1 && strcmp(key, node->right->value.rz) > 0) return rotate_left(node);
+    if (bf > 1 && strcmp(key, node->left->value.rz) > 0) {
+        node->left = rotate_left(node->left);
+        return rotate_right(node);
+    }
+    if (bf < -1 && strcmp(key, node->right->value.rz) < 0) {
+        node->right = rotate_right(node->right);
+        return rotate_left(node);
+    }
+
+    return node;
 }
 
-
-Node * createNode ( const char * str ) {
-	Node * newNode = ( Node * ) malloc ( sizeof ( Node ) );
-	unsigned copysize = strlen( str ) + 1;
-	strncpy ( newNode -> value . rz, str, copysize );
-	newNode -> value . cap = 1;
-	newNode ->  value . size = 0;
-	newNode ->  value . spoted = ( Spoted * ) malloc( sizeof ( Spoted ) );
-
-	newNode ->  left = NULL;
-	newNode ->  right = NULL;
-	newNode ->  leftCount = 0;
-	newNode ->  rightCount = 0;
-	return newNode;
+Node *findAVL(Node *node, const char *key) {
+    if (!node) return NULL;
+    int cmp = strcmp(key, node->value.rz);
+    if (cmp < 0) return findAVL(node->left, key);
+    if (cmp > 0) return findAVL(node->right, key);
+    return node;
 }
 
-Node * insertAVL ( Node * r, const char * value, Node ** result ) {
-	if ( r == NULL ) {
-		*result = createNode ( value );
-		return *result;
-	}
-	unsigned cmp = strcmp( value, r -> value . rz ); 
-	if ( cmp < 0) {
-		r -> left = insertAVL( r -> left, value, result );
-		calculateLeft( r );
-	} else if ( cmp > 0 ) {
-		r -> right = insertAVL( r  -> right, value, result ); 
-		calculateRight( r );
-	} else *result = r; 
-	r = balance( r );
-	return r;
+void deleteSpoted(Node *root) {
+    if (!root) return;
+    for (unsigned i = 0; i < root->value.size; ++i) {
+        if (root->value.spoted[i].camera_id) free(root->value.spoted[i].camera_id);
+    }
+    if (root->value.spoted) free(root->value.spoted);
 }
 
-Node * findAVL ( Node * r, const char * value ) {
-	if ( r == NULL ) return NULL;
-	unsigned cmp = strcmp( value, r -> value . rz ); 
-	if ( cmp < 0 ) return findAVL( r -> left, value );
-	if ( cmp > 0 ) return findAVL( r -> right, value );
-	return r;
+void deleteAVL(Node *root) {
+    if (!root) return;
+    deleteAVL(root->left);
+    deleteAVL(root->right);
+    deleteSpoted(root);
+    free(root);
 }
 
-void deleteSpoted ( Node * root ) {
-	for ( unsigned i = 0; i < root -> value . size; i ++ )
-		free ( root -> value . spoted [ i ] . camera_id );
-	free (root -> value . spoted);
+unsigned binarySearch(const TCar *curr, const TTime date) {
+    if (curr->size == 0) return 0;
+    int lo = 0;
+    int hi = (int)curr->size - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (lessDate(date, curr->spoted[mid].date)) hi = mid - 1;
+        else if (lessDate(curr->spoted[mid].date, date)) lo = mid + 1;
+        else return (unsigned)mid; 
+    }
+    return (unsigned)lo; 
 }
 
-void deleteAVL ( Node * root ) {
-	if ( root == NULL ) return;
-	deleteAVL( root -> left );
-	deleteAVL( root -> right );
-	deleteSpoted( root );
-	free (root );
+void insertSort(Spoted *cell, unsigned indx, TCar *curr) {
+    int i = curr->size - 1;
+    for (; i >= (int)indx; --i) curr->spoted[i + 1] = curr->spoted[i];
+    curr->spoted[indx] = *cell;
+    curr->size++;
 }
 
-// -----------------------------------------------------------------
-
-unsigned binarySearch ( const TCar * curr, const TTime date ) {
-	int lo = 0;
-	int hi = curr -> size - 1;
-	unsigned mid = 0;
-	while ( lo <= hi ) {
-		mid = lo + ( hi - lo ) / 2;
-		if ( lessDate( date, curr -> spoted [ mid ].date ) ) hi = mid - 1;
-		else if ( lessDate(  curr -> spoted [ mid ].date, date ) ) lo = mid + 1;
-		else return mid;
-	}
-	return mid;
-}
-
-void insertSort ( Spoted * cell, int indx, TCar * curr ) {
-	int i = curr -> size == 0 ? -1 : curr -> size - 1;
-	for ( ; i >= 0 && i >= indx; i -- ) 
-		curr -> spoted [ i + 1 ] = curr -> spoted [ i ];
-	curr -> spoted [ i + 1 ] = *cell;
-	curr -> size ++;
-}
-
-void insertCam ( int cell, Spoted * curr ) {
-	int i = curr -> size == 0 ? -1 : curr -> size - 1;
-	for ( ; i >= 0 && curr -> camera_id [ i ] > cell; i -- ) 
+void insertCam ( unsigned camera_id, Spoted * curr ) {
+    int i = curr->size - 1;
+	for (; i >= 0 && curr -> camera_id [ i ] > camera_id; i -- )
 		curr -> camera_id [ i + 1 ] = curr -> camera_id [ i ];
-	curr -> camera_id [ i + 1 ] = cell;
+	curr -> camera_id [ i + 1 ] = camera_id;
 	curr -> size ++;
 }
 
-void insertSpoted ( TCar * curr, TTime date, unsigned camera_id ) {
-	
-	if ( curr -> cap <= curr -> size ) {
-		curr -> cap *= 2;
-		curr -> spoted = ( Spoted * ) realloc ( curr -> spoted, curr -> cap * sizeof ( Spoted ) );
-	}
+void insertSpoted(TCar *curr, TTime date, unsigned camera_id) {
+    if (curr->cap <= curr->size) {
+        unsigned newcap = curr->cap ? curr->cap * 2u : 1u;
+        Spoted *tmp = ( Spoted * ) realloc(curr->spoted, newcap * sizeof(Spoted));
+        for (unsigned i = curr->cap; i < newcap; ++i) {
+            tmp[i].camera_id = NULL;
+            tmp[i].capacity = 0;
+            tmp[i].size = 0;
+        }
+        curr->spoted = tmp;
+        curr->cap = newcap;
+    }
 
-	unsigned indx = binarySearch ( curr, date );
-	Spoted * spoted = &curr -> spoted [ indx ];
-	if ( equalDate ( spoted -> date, date ) ) {
-		if ( spoted -> capacity == spoted -> size ) {
-			spoted -> capacity *= 2;
-			spoted -> camera_id = ( int * ) realloc ( spoted -> camera_id, spoted -> capacity * sizeof ( int ) );
-		}
-		spoted -> camera_id [ spoted -> size ++ ] = camera_id;
-	} else {
-		Spoted cell;
-		cell . camera_id = ( int * ) malloc ( sizeof ( int ) );
-		cell . camera_id [ 0 ] = camera_id;
-		cell . capacity = 1;
-		cell . size = 1;
-		cell  . date = date;
-		insertSort ( &cell, indx, curr );
-	}
+    unsigned indx = binarySearch(curr, date);
+
+    if (indx < curr->size && equalDate(curr->spoted[indx].date, date)) {
+        Spoted *s = &curr->spoted[indx];
+        if (s->capacity <= s->size) {
+            unsigned newc = s->capacity ? s->capacity * 2u : 1u;
+            unsigned *tmp = ( unsigned * )realloc(s->camera_id, newc * sizeof(unsigned));
+            s->camera_id = tmp;
+            s->capacity = newc;
+        }
+		insertCam(camera_id, s);
+    } else {
+        Spoted cell;
+        cell.camera_id = ( unsigned * )malloc(sizeof(unsigned));
+        cell.camera_id[0] = camera_id;
+        cell.capacity = 1;
+        cell.size = 1;
+        cell.date = date;
+        insertSort(&cell, indx, curr);
+    }
 }
 
-void insertRZ ( char * rz, TTime date, int camera_id ) {
-	Node * curr;
-	first = insertAVL ( first, rz, &curr );
-	insertSpoted( &curr -> value, date, camera_id );
+void insertRZ(const char *rz, TTime date, int camera_id) {
+    Node *curr = NULL;
+    first = insertAVL(first, rz, &curr);
+    insertSpoted(&curr->value, date, (unsigned)camera_id);
 }
 
-// -------------------------------------------------------------------
-
-void result_out ( Spoted * spoted ) {
-	printf ( "%s ", incode_month( spoted -> date .  m_Month  ) );
-	printf ( "%d ", spoted -> date . m_Day );
-	printf ( "%d:%d, ", spoted -> date . m_Hour, spoted -> date . m_Minute );
-
-	printf( "%dx [", spoted -> size );
-	for ( unsigned i = 0; i < spoted -> size; i ++ ) {
-		printf( "%d", spoted -> camera_id [ i ] );
-		if ( i != spoted -> size - 1 ) 
-			printf(", ");
-	}
-	printf( "]\n" );
+void result_out(const Spoted *spoted) {
+    printf("%s %d %02d:%02d, ", incode_month(spoted->date.m_Month),
+           spoted->date.m_Day,
+           spoted->date.m_Hour,
+           spoted->date.m_Minute);
+    printf("%ux [", spoted->size);
+    for (unsigned i = 0; i < spoted->size; ++i) {
+        printf("%d", spoted->camera_id[i]);
+        if (i + 1 != spoted->size) printf(", ");
+    }
+    printf("]\n");
 }
 
-void findResult ( TTime date, char * rz ) {
-	Node * curr = findAVL ( first, rz );
-	if ( curr == NULL ) {
-		printf( "> Car not found.\n" );
-		return;
-	}
-	unsigned result = binarySearch( &curr -> value, date );
-	
-	if ( equalDate ( curr -> value . spoted [ result ] . date, date ) ) {
-		printf ( "> Exact: " );
-		result_out ( &curr -> value . spoted [ result ] );
-		return;
-	}
+void findResult(TTime date, const char *rz) {
+    Node *curr = findAVL(first, rz);
+    if (!curr) {
+        printf("> Car not found.\n");
+        return;
+    }
+    unsigned pos = binarySearch(&curr->value, date);
+    if (pos < curr->value.size && equalDate(curr->value.spoted[pos].date, date)) {
+        printf("> Exact: ");
+        result_out(&curr->value.spoted[pos]);
+        return;
+    }
 
-	printf( "> Previous: " );
-	if ( result == 0 && lessDate ( date, curr -> value . spoted [ result ] . date ) ) {
-		printf( "N/A\n" );
-	} else {
-		result_out ( &curr -> value . spoted [ result - 1 ] );
-	}
+    printf("> Previous: ");
+    if (pos == 0 && curr->value.size == 0) {
+        printf("N/A\n");
+    } else if (pos == 0 && lessDate(date, curr->value.spoted[0].date)) {
+        printf("N/A\n");
+    } else {
+        unsigned idx = (pos == 0) ? 0 : pos - 1;
+        result_out(&curr->value.spoted[idx]);
+    }
 
-	printf("> Next: ");
-	if ( result == curr -> value . size - 1 && 
-		 lessDate ( curr -> value . spoted [ result ] . date, date ) ) {
-		printf( "N/A\n" );
-	} else {
-		result_out ( &curr -> value . spoted [ result ] );
-	}
+    printf("> Next: ");
+    if (pos >= curr->value.size) {
+        printf("N/A\n");
+    } else {
+        result_out(&curr->value.spoted[pos]);
+    }
 }
 
-// --------------------------------------------------------------------
+int parse_reports(void) {
+    char c;
+    char rz[MAX_STR];
+    TTime date;
+    int camera_id;
 
-int parse_reports () {
-	data . size = 0;
-	data . cap = 2;
-	data . cars = ( TCar * ) malloc ( sizeof ( TCar ) * data . cap );
-	char sign;
-	char rz [ MAX_STR ];
-	TTime date;
-	int camera_id;
-	if ( scanf ( " %c ", &sign ) != 1 || sign != '{' ) INVALID_INPUT;
-	while ( sign != '}' ) {
-		// Check for invalid input
-		if ( scanf ( " %d", &camera_id ) != 1 ) INVALID_INPUT;
-		if ( camera_id <= 0 ) INVALID_INPUT;
-		if ( scanf ( " %c", &sign ) != 1 ) INVALID_INPUT;
-		if ( sign != ':' ) INVALID_INPUT;
+    if (scanf(" %c", &c) != 1) INVALID_INPUT;
+    if (c != '{') INVALID_INPUT;
 
-		if ( scanf ( " %1000s ", rz ) != 1 ) INVALID_INPUT;
-		if ( !parse_date( &date ) ) INVALID_INPUT;
+    int ch;
+    do {
+        ch = getchar();
+        if (ch == EOF) INVALID_INPUT;
+    } while (isspace(ch));
+    if (ch == '}') {
+        INVALID_INPUT;
+    }
+    ungetc(ch, stdin);
 
-		if ( scanf ( " %c", &sign ) != 1 ) INVALID_INPUT;
-		if ( sign != ',' && sign != '}' ) INVALID_INPUT;
-		insertRZ( rz, date, camera_id );
-	}
-	return 1;
+    while (1) {
+        if (scanf(" %d", &camera_id) != 1) INVALID_INPUT;
+        if (camera_id < 0) INVALID_INPUT;
+        char sign;
+        if (scanf(" %c", &sign) != 1) INVALID_INPUT;
+        if (sign != ':') INVALID_INPUT;
+        if (scanf(" %1000s", rz) != 1) INVALID_INPUT;
+        if (!parse_date(&date)) INVALID_INPUT;
+        if (scanf(" %c", &sign) != 1) INVALID_INPUT;
+        if (sign != ',' && sign != '}') INVALID_INPUT;
+
+        insertRZ(rz, date, camera_id);
+
+        if (sign == '}') break;
+    }
+    return 1;
 }
 
-int parse_search_command ( char * str, TTime * date ) {
-	if ( scanf ( " %1000s ", str ) != 1 ) INVALID_INPUT;
-	if ( !parse_date( date ) ) INVALID_INPUT;
-	return 1;
+int main(void) {
+    printf("Camera reports:\n");
+    if (!parse_reports()) return 0;
+    printf("Search:\n");
+    TTime input_date;
+    char input_string[MAX_STR];
+
+	while (1) {
+        int r = scanf(" %1000s", input_string);
+        if (r == EOF) break;
+        if (r != 1) { deleteAVL(first); INVALID_INPUT; }
+        if (!parse_date(&input_date)) { deleteAVL(first); INVALID_INPUT; }
+        findResult(input_date, input_string);
+    }
+
+    deleteAVL(first);
+    return 0;
 }
 
-
-int main () {
-	printf( "Camera reports:\n");
-	if ( !parse_reports() ) return 0;
-	printf( "Search:\n");
-	TTime input_date;
-	char input_string [ MAX_STR ];
-	while ( !feof ( stdin ) ) {
-		if ( !parse_search_command( input_string, &input_date ) ) {
-			deleteAVL(first);
-			return 0;
-		}
-		findResult ( input_date, input_string );
-	}
-	return 0;
-}

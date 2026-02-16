@@ -8,7 +8,7 @@
 #define MAX_BUFF 1024
 
 typedef struct {
-	char * dna;
+	char * str;
 	double frq;
 } Cell;
 
@@ -23,14 +23,14 @@ MainData data;
 bool insertStr ( char * input, Cell * curr, size_t len ) {
 	size_t counter = 0;
 	if ( len == 0 ) return false;
-	curr -> dna = ( char * ) malloc ( len );
+	curr -> str = ( char * ) malloc ( len );
 	for ( size_t i = 0; i < len; i ++ ) {
 		if ( input [ i ] == '\0' ) {
-			curr -> dna [ i ] = input [ i ]; 
+			curr -> str [ i ] = input [ i ]; 
 			break;
 		}
 		if ( input [ i ] != 'A' && input [ i ] != 'G' && input [ i ] != 'C' && input [ i ] != 'T' ) return false;
-		curr -> dna [ i ] = input [ i ];
+		curr -> str [ i ] = input [ i ];
 		counter ++;
 	}
 	if ( counter % 3 != 0 ) return false;
@@ -61,13 +61,13 @@ bool find ( const char *curr, const char *elem ) {
 }
 
 void deleteAll () {
-	for ( size_t i = 0; i < data . size; i ++ ) free ( data . cells [ i ] . dna );
+	for ( size_t i = 0; i < data . size; i ++ ) free ( data . cells [ i ] . str );
 	free( data . cells );
 }
 
 int cmp ( const void *a, const void *b ) {
-    const Cell *A = *( const Cell** ) a;
-    const Cell *B = *( const Cell** ) b;
+    const Cell *A = ( const Cell* ) a;
+    const Cell *B = ( const Cell* ) b;
     if ( A -> frq > B -> frq ) return -1;
     if ( A -> frq < B -> frq ) return 1;
     return 0;
@@ -119,41 +119,39 @@ int main () {
 		deleteAll ();
 		INVALID_INPUT;
 	}
+	qsort( data . cells, data . size, sizeof ( Cell ), cmp );
 	printf( "Searches:\n" );
 
+	size_t resultSize = 0;
+	Cell **result = ( Cell ** ) malloc ( 50 * sizeof ( Cell * ) );
 	while ( ( strlen = getline ( &buff, &strcap, stdin ) ) != ( size_t ) EOF ) {
 		if ( strlen > 0 && buff [ strlen - 1 ] == '\n' ) buff [ strlen - 1 ] = '\0';
 		if ( buff [ 0 ] == '\0' ) {
 			deleteAll ();
 			free ( buff );
+			free ( result );
 			INVALID_INPUT;
 		}
 		if ( !check_dna( buff, strlen ) ) {
 			free ( buff );
+			free ( result );
 			deleteAll ();
 			INVALID_INPUT;
 		}
-		Cell **result = NULL;
-        size_t resultSize = 0, resultCap = 0;
-
-        for ( size_t i = 0; i < data . size; i++ ) {
-            if ( find ( data . cells [ i ] . dna, buff ) ) {
-                if ( resultSize == resultCap ) {
-                    resultCap = resultCap ? resultCap * 2 : 8;
-                    result = ( Cell ** ) realloc( result, resultCap * sizeof ( Cell * ) );
-                }
+		resultSize = 0;
+        for ( size_t i = 0; i < data . size ; i++ ) {
+            if ( find ( data . cells [ i ] . str, buff ) ) {
+				if ( resultSize == 50 ) break;
                 result [ resultSize++ ] = &data . cells [ i ] ;
             }
         }
-		qsort( result, resultSize, sizeof ( Cell * ), cmp );
 
 		printf( "Found: %zu\n", resultSize );
-        for ( size_t i = 0; i < resultSize && i < 50; i ++ )
-            printf ( "> %s\n", result [ i ] -> dna );
-
-        free ( result );
+        for ( size_t i = 0; i < resultSize; i ++ )
+            printf ( "> %s\n", result [ i ] -> str );
 	}
 
+	free ( result );
 	free ( buff );
 	deleteAll ();
 

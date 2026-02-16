@@ -1,0 +1,3 @@
+Enter circle #1 parameters:
+Enter circle #2 parameters:
+Internal touch, circle #2 lies inside circle #1, overlap: 12.566371

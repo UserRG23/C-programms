@@ -1,0 +1,2 @@
+Type color in RGB format:
+#7F7F00
