@@ -13,8 +13,8 @@ Each directory represents a spicific task. You will find:
 
 To compile and run the tasks, ensure you have `gcc` and `make` installed. Use the following commands from within a task directory:
 
-| Command        | Action |
-| -------------- | ------ |
-| **make build** | Compiles the code and places the binary in the `bin/` directory. |
-| **make run**   | Compiles the code and executes it immediately. |
-| **make test**  | Compiles the code and runs the automated test script located in `bin/`. |
+| Command      | Action |
+| ------------ | ------ |
+| `make build` | Compiles the code and places the binary in the `bin/` directory. |
+| `make run`   | Compiles the code and executes it immediately. |
+| `make test`  | Compiles the code and runs the automated test script located in `bin/`. |
