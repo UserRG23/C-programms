@@ -1,2 +1,0 @@
-Enter chessboard size:
-Invalid input.

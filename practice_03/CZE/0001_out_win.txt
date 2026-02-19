@@ -1,2 +1,0 @@
-Zadejte barvu v RGB formatu:
-#00FF00

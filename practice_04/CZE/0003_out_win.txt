@@ -1,2 +1,0 @@
-Zadejte pocet poli:
-Nespravny vstup.
