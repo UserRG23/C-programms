@@ -10,5 +10,3 @@ The program must validate input data. If the input is invalid, the program detec
 
 * the program cannot read an integer from the input or
 * the integer read from the input is outside of interval [0 to 8].
-
-Please note the program outputs various error messages. There is an error message if the program is unable to read the input integer and a different error message if the input integer is outside of the valid range (see example runs below).
